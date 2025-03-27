@@ -236,46 +236,86 @@ class GerenciadorFuncionarios {
         });
     }
 
-    // Métodos para relatórios (usando métodos de array)
+    // Métodos para relatórios refatorados com Streams JS
     filtrarSalarioAlto() {
-        this.funcionariosFiltrados = this.funcionarios.filter(f => f.salario > 5000);
+        this.funcionariosFiltrados = this.funcionarios
+            .filter(f => f.salario > 5000)
+            .sort((a, b) => b.salario - a.salario); // Ordena por salário decrescente
+        
         this.atualizarTabela();
+        
+        const total = this.funcionariosFiltrados.length;
+        const somaSalarios = this.funcionariosFiltrados
+            .reduce((acc, f) => acc + f.salario, 0);
+        const media = total > 0 ? somaSalarios / total : 0;
+        
         this.exibirRelatorio(
             'Funcionários com Salário > R$5000', 
-            this.funcionariosFiltrados.length > 0 ? 
-                [`Total: ${this.funcionariosFiltrados.length} funcionário(s)`] : 
-                ['Nenhum funcionário com salário acima de R$5000']
+            total > 0 ? [
+                `Total: ${total} funcionário(s)`,
+                `Soma salarial: R$ ${somaSalarios.toFixed(2)}`,
+                'Lista ordenada por salário (maior para menor):',
+                ...this.funcionariosFiltrados.map(f => 
+                    `${f.nome} - ${f.cargo} - R$ ${f.salario.toFixed(2)}`)
+            ] : ['Nenhum funcionário com salário acima de R$5000']
         );
     }
 
     calcularMediaSalarial() {
-        if (this.funcionarios.length === 0) {
-            this.exibirRelatorio('Média Salarial', ['Nenhum funcionário cadastrado']);
-            return;
-        }
+        const [total, somaSalarios] = this.funcionarios
+            .reduce(([count, sum], f) => [count + 1, sum + f.salario], [0, 0]);
         
-        const total = this.funcionarios.reduce((sum, func) => sum + func.salario, 0);
-        const media = total / this.funcionarios.length;
-        this.exibirRelatorio('Média Salarial', [`Média salarial: R$ ${media.toFixed(2)}`]);
+        const media = total > 0 ? somaSalarios / total : 0;
+        
+        this.exibirRelatorio('Média Salarial', [
+            `Total de funcionários: ${total}`,
+            `Soma total salarial: R$ ${somaSalarios.toFixed(2)}`,
+            `Média salarial: R$ ${media.toFixed(2)}`,
+            'Distribuição por cargo:',
+            ...Object.entries(
+                this.funcionarios.reduce((acc, f) => {
+                    acc[f.cargo] = (acc[f.cargo] || 0) + f.salario;
+                    return acc;
+                }, {})
+            ).map(([cargo, soma]) => 
+                `${cargo}: R$ ${soma.toFixed(2)}`)
+        ]);
     }
 
     mostrarCargosUnicos() {
-        const cargosUnicos = [...new Set(this.funcionarios.map(f => f.cargo))];
+        const cargosUnicos = this.funcionarios
+            .map(f => f.cargo)
+            .filter((cargo, index, self) => self.indexOf(cargo) === index)
+            .sort();
+        
         this.exibirRelatorio(
             'Cargos Únicos', 
-            cargosUnicos.length > 0 ? 
-                cargosUnicos.map(cargo => cargo) : 
-                ['Nenhum cargo cadastrado']
+            cargosUnicos.length > 0 ? [
+                `Total de cargos distintos: ${cargosUnicos.length}`,
+                'Lista de cargos:',
+                ...cargosUnicos.map((cargo, index) => `${index + 1}. ${cargo}`)
+            ] : ['Nenhum cargo cadastrado']
         );
     }
 
     mostrarNomesMaiusculo() {
-        const nomesMaiusculo = this.funcionarios.map(f => f.nome.toUpperCase());
+        const nomesInfo = this.funcionarios
+            .map(f => ({
+                nomeOriginal: f.nome,
+                nomeMaiusculo: f.nome.toUpperCase(),
+                cargo: f.cargo,
+                salario: f.salario
+            }))
+            .sort((a, b) => a.nomeOriginal.localeCompare(b.nomeOriginal));
+        
         this.exibirRelatorio(
             'Nomes em Maiúsculo', 
-            nomesMaiusculo.length > 0 ? 
-                nomesMaiusculo : 
-                ['Nenhum funcionário cadastrado']
+            nomesInfo.length > 0 ? [
+                `Total de funcionários: ${nomesInfo.length}`,
+                'Lista completa:',
+                ...nomesInfo.map(f => 
+                    `${f.nomeMaiusculo} (${f.nomeOriginal}) - ${f.cargo} - R$ ${f.salario.toFixed(2)}`)
+            ] : ['Nenhum funcionário cadastrado']
         );
     }
 
